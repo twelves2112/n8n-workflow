@@ -1,0 +1,241 @@
+{
+  "name": "Transaction Log",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a0940bbd-84a4-43e2-aba1-da86bed93a6e",
+              "leftValue": "={{ $json.From }}",
+              "rightValue": "opay-nigeria.com",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "fe28b8fd-4c0e-4c3e-8611-fdef58cdb7ac",
+              "leftValue": "={{ $json.From }}",
+              "rightValue": "gtbank.com",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "016a691e-5a79-4d89-bc30-5328fa0b2b65",
+              "leftValue": "={{ $json.From }}",
+              "rightValue": "kuda.com",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "a4190845-c777-44f7-9688-3e228efe29ed",
+              "leftValue": "={{ $json.From }}",
+              "rightValue": "sterling.ng",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "looseTypeValidation": "={{ false }}",
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        -80
+      ],
+      "id": "57946b6a-3e7c-4bc5-b3be-970d087fa793",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "/*\nconst snippet = $input.first().json.snippet || '';\nconst from = $input.first().json.from || '';\nconst date = $input.first().json.internalDate || Date.now();\n\n// Extract amount e.g. \"\u20a6500.00\"\nlet amount = 0;\nconst amountMatch = snippet.match(/\u20a6([\\d,]+\\.?\\d*)/);\nif (amountMatch) {\n  amount = parseFloat(amountMatch[1].replace(/,/g, ''));\n}\n\n// Extract recipient name - handles both formats:\n// \"Name: JOHN DOE\" and \"Name: AWE/john doe\"\nlet description = 'OPay Transaction';\nconst nameMatch = snippet.match(/Name:\\s*([^B]+?)(?:Bank:|$)/i);\nif (nameMatch) {\n  let rawName = nameMatch[1].trim();\n  // Remove anything before \"/\" if present\n  if (rawName.includes('/')) {\n    rawName = rawName.split('/').pop().trim();\n  }\n  description = rawName.trim();\n}\n\n// Extract recipient bank\nlet recipientBank = '';\nconst bankMatch = snippet.match(/Bank:\\s*([A-Za-z\\s]+?)(?:Account|PLC|$)/i);\nif (bankMatch) {\n  recipientBank = bankMatch[1].trim();\n}\n\n// Convert date\nconst txDate = new Date(parseInt(date)).toISOString();\n\nreturn [{\n  json: {\n    description: description,\n    amount: amount,\n    date: txDate,\n    recipientBank: recipientBank,\n    bank: 'OPay',\n    emailBody: snippet.substring(0, 500),\n  }\n}];*/\n\n //this is to be used when I allow multiple banks\nconst snippet = $input.first().json.snippet || '';\nconst from = ($input.first().json.from || '').toLowerCase();\nconst date = $input.first().json.internalDate || Date.now();\nconst txDate = new Date(parseInt(date)).toISOString();\n\nlet amount = 0;\nlet description = 'Bank Transaction';\nlet recipientBank = '';\nlet bankName = 'Unknown';\n\n// \u2500\u2500 OPAY \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nif (from.includes('opay-nigeria.com')) {\n  bankName = 'OPay';\n\n  // Amount: \"\u20a6500.00\"\n  const amountMatch = snippet.match(/\u20a6([\\d,]+\\.?\\d*)/);\n  if (amountMatch) {\n    amount = parseFloat(amountMatch[1].replace(/,/g, ''));\n  }\n\n  // Name: handles \"Name: JOHN DOE\" and \"Name: AWE/john doe\"\n  const nameMatch = snippet.match(/Name:\\s*(.+?)\\s+Bank:/i);\n  if (nameMatch) {\n    let rawName = nameMatch[1].trim();\n    if (rawName.includes('/')) {\n      rawName = rawName.split('/').pop().trim();\n    }\n    description = rawName.trim();\n  }\n\n  // Recipient Bank\n  const bankMatch = snippet.match(/Bank:\\s*([A-Za-z\\s]+?)(?:Account|PLC|$)/i);\n  if (bankMatch) {\n    recipientBank = bankMatch[1].trim();\n  }\n}\n\n// \u2500\u2500 GTBANK \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nelse if (from.includes('gtbank.com')) {\n  bankName = 'GTBank';\n\n  // Amount: \"NGN 2400\" or \"NGN2400\"\n  const amountMatch = snippet.match(/Amount\\s*:?\\s*NGN\\s*([\\d,]+\\.?\\d*)/i);\n  if (amountMatch) {\n    amount = parseFloat(amountMatch[1].replace(/,/g, ''));\n  }\n\n  // Description: after \"Description :\" \n  const descMatch = snippet.match(/Description\\s*:(.*?)(?:Amount|Value Date)/is);\n  if (descMatch) {\n    let rawDesc = descMatch[1].trim();\n    // Extract recipient name after \"TO\"\n    const toMatch = rawDesc.match(/(?:NIP TRANSFER TO|TRANSFER TO)\\s+([A-Z\\s\\-]+?)(?:\\s*$|-\\s*[A-Z])/i);\n    if (toMatch) {\n      description = toMatch[1].trim();\n    } else {\n      description = rawDesc.substring(0, 50).trim();\n    }\n  }\n\n  // Remarks (contains cleaner description)\n  const remarksMatch = snippet.match(/Remarks\\s*:(.*?)(?:Time|$)/is);\n  if (remarksMatch) {\n    recipientBank = remarksMatch[1].trim();\n  }\n}\n\n// \u2500\u2500 STERLING BANK \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nelse if (from.includes('sterling.ng')) {\n  bankName = 'Sterling Bank';\n\n  // Amount: \"NGN2,500.00\"\n  const amountMatch = snippet.match(/Amount\\s*NGN([\\d,]+\\.?\\d*)/i);\n  if (amountMatch) {\n    amount = parseFloat(amountMatch[1].replace(/,/g, ''));\n  }\n\n  // Description: \"OneBank Transfer from X to Y\"\n  const descMatch = snippet.match(/Description\\s+(.+?)(?:Amount|$)/is);\n  if (descMatch) {\n    let rawDesc = descMatch[1].trim();\n    // Extract recipient (after \"to\")\n    const toMatch = rawDesc.match(/to\\s+([A-Z\\s]+?)$/i);\n    if (toMatch) {\n      description = toMatch[1].trim();\n    } else {\n      description = rawDesc.substring(0, 50).trim();\n    }\n  }\n\n  recipientBank = 'Sterling Bank';\n}\n\n// \u2500\u2500 KUDA \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nelse if (from.includes('kuda.com')) {\n  bankName = 'Kuda';\n\n  // Amount + recipient + narration: \"You just sent \u20a62,100.00 to Marcus Olaitan - Food.\"\n  const kudaMatch = snippet.match(/you just sent\\s+\u20a6([\\d,]+\\.?\\d*)\\s+to\\s+(.+?)(?:\\.|$)/i);\n  if (kudaMatch) {\n    amount = parseFloat(kudaMatch[1].replace(/,/g, ''));\n    \n    // Split recipient and narration by \" - \"\n    const parts = kudaMatch[2].split(' - ');\n    description = parts[0].trim();\n    \n    // \ud83c\udf89 Kuda includes narration! Use it for better categorization\n    if (parts[1]) {\n      recipientBank = parts[1].trim(); // we'll use this field for narration\n    }\n  }\n}\n\nreturn [{\n  json: {\n    description: description,\n    amount: amount,\n    date: txDate,\n    recipientBank: recipientBank,\n    bank: bankName,\n    emailBody: snippet.substring(0, 500),\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        -80
+      ],
+      "id": "b258ad25-9a8a-4caf-bce7-5ba554e74675",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "const snippet = ($input.first().json.emailBody || '').toLowerCase();\nconst description = ($input.first().json.description || '').toLowerCase();\nconst amount = $input.first().json.amount || 0;\n\nlet category = 'Transfer'; // default for person-to-person OPay sends\n\n// FOOD & DINING\nconst foodKeywords = [\n  'chowdeck', 'jumia food', 'bolt food', 'glovo', 'eatrite',\n  'restaurant', 'kitchen', 'eatery', 'suya', 'bukka', 'canteen',\n  'food', 'pizza', 'chicken', 'burger', 'shawarma', 'cafe', 'bakery',\n  'choplife', 'crunchies', 'dominos', 'kfc', 'mcdonalds', 'kilimanjaro'\n];\n\n// TRANSPORTATION\nconst transportKeywords = [\n  'uber', 'bolt', 'taxify', 'indriver', 'rida',\n  'fuel', 'petrol', 'filling station', 'ardova', 'nipco', 'total',\n  'transport', 'bus', 'ride', 'trip', 'fare', 'logistics'\n];\n\n// AIRTIME & DATA\nconst airtimeKeywords = [\n  'mtn', 'airtel', 'glo', '9mobile', 'etisalat',\n  'airtime', 'data', 'recharge', 'bundle', 'subscription',\n  'smile', 'spectranet', 'ipnx'\n];\n\n// ENTERTAINMENT\nconst entertainmentKeywords = [\n  'netflix', 'spotify', 'youtube', 'showmax', 'dstv', 'gotv',\n  'startimes', 'cinema', 'filmhouse', 'genesis', 'silverbird',\n  'event', 'ticket', 'concert', 'game', 'playstation', 'xbox',\n  'apple music', 'audiomack', 'boomplay'\n];\n\n// EDUCATION\nconst educationKeywords = [\n  'school', 'university', 'college', 'tuition', 'fees',\n  'course', 'udemy', 'coursera', 'tutorial', 'training',\n  'book', 'stationery', 'exam', 'waec', 'jamb', 'neco',\n  'student', 'lecture', 'academy'\n];\n\n// SHOPPING\nconst shoppingKeywords = [\n  'jumia', 'konga', 'jiji', 'payporte', 'fashion',\n  'mall', 'store', 'shop', 'market', 'cloth', 'shoe',\n  'bag', 'electronics', 'phone', 'laptop', 'gadget',\n  'supermarket', 'shoprite', 'spar', 'ebeano'\n];\n\n// BILLS & UTILITIES\nconst billsKeywords = [\n  'electricity', 'nepa', 'phcn', 'ikedc', 'ekedc', 'aedc',\n  'water', 'lawma', 'waste', 'rent', 'landlord',\n  'internet', 'wifi', 'cable', 'insurance'\n];\n\n// GIFT\nconst giftKeywords = [\n  'gift', 'present', 'birthday', 'anniversary', 'celebration',\n  'surprise', 'hamper', 'bouquet', 'appreciation', 'token',\n  'goodwill', 'happy birthday', 'well done', 'congratulations'\n];\n\n// DEBT REPAYMENT\nconst debtKeywords = [\n  'debt', 'owe', 'owed', 'loan',\n  'pay back', 'paying back',\n  'borrow', 'borrowed', 'lend',\n  'settle', 'settlement',\n  'i owe', 'you owe', 'outstanding'\n];\n\n// Match against all keyword lists\nconst narration = ($input.first().json.recipientBank || '').toLowerCase();\nconst allText = snippet + ' ' + description + ' ' + narration;\n\nif (foodKeywords.some(k => allText.includes(k))) {\n  category = 'Food & Dining';\n} else if (transportKeywords.some(k => allText.includes(k))) {\n  category = 'Transportation';\n} else if (airtimeKeywords.some(k => allText.includes(k))) {\n  category = 'Airtime & Data';\n} else if (entertainmentKeywords.some(k => allText.includes(k))) {\n  category = 'Entertainment';\n} else if (educationKeywords.some(k => allText.includes(k))) {\n  category = 'Education';\n} else if (shoppingKeywords.some(k => allText.includes(k))) {\n  category = 'Shopping';\n} else if (billsKeywords.some(k => allText.includes(k))) {\n  category = 'Bills & Utilities';\n} else if (giftKeywords.some(k => allText.includes(k))) {\n  category = 'Gift';\n} else if (debtKeywords.some(k => allText.includes(k))) {\n  category = 'Debt Repayment';\n}\n\nreturn [{\n  json: {\n    description: $input.first().json.description,\n    amount: $input.first().json.amount,\n    date: $input.first().json.date,\n    recipientBank: $input.first().json.recipientBank,\n    bank: $input.first().json.bank,\n    emailBody: $input.first().json.emailBody,\n    category: category\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        -80
+      ],
+      "id": "0820ff80-cdb9-4c4f-8b02-ad1bb8a5ea32",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "31f72cc2-d28a-80db-985b-ceb3ebeb853d",
+          "mode": "list",
+          "cachedResultName": "Transaction Log",
+          "cachedResultUrl": "https://www.notion.so/31f72cc2d28a80db985bceb3ebeb853d"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Description|title",
+              "title": "={{ $('Code in JavaScript1').item.json.description }}"
+            },
+            {
+              "key": "Amount|number",
+              "numberValue": "={{ $json.amount }}"
+            },
+            {
+              "key": "Date|date",
+              "date": "={{ $json.date }}",
+              "timezone": "Africa/Lagos"
+            },
+            {
+              "key": "Category|select",
+              "selectValue": "={{ $json.category }}"
+            },
+            {
+              "key": "Bank|rich_text",
+              "textContent": "={{ $json.bank }}"
+            },
+            {
+              "key": "Email Body|rich_text",
+              "textContent": "={{ $json.emailBody }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        -80
+      ],
+      "id": "f26f4b64-a862-474b-b324-5a6942a2a1cb",
+      "name": "Create a database page",
+      "credentials": {
+        "notionApi": {
+          "id": "rZDGU5Hm2ppT9eX1",
+          "name": "Notion account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        -80
+      ],
+      "id": "ceb0e27c-d940-4295-8b91-bf79d28a7e6b",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tXU6nTqONWn4Yqb9",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Create a database page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a database page": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "05f29931-2573-42b8-8135-98fd0fe9b726",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e0ded2a90d3379c1cd06ed702f16799bfcfc6b97017f5870f7dd1a63d71b3c15"
+  },
+  "id": "BspFspLozokk8RK0",
+  "tags": []
+}

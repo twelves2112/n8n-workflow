@@ -1,0 +1,296 @@
+{
+  "name": "D-PIA Tasks Reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        448,
+        80
+      ],
+      "id": "5fe4f2b5-2c96-44dd-ad7a-c388d5afce77",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "18UF4z_jisUgYOQ6Ki2un1kPwo0nP2eLRftbFUdLrAP0",
+          "mode": "list",
+          "cachedResultName": "Team Tasks - per Employee",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/18UF4z_jisUgYOQ6Ki2un1kPwo0nP2eLRftbFUdLrAP0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1089818280,
+          "mode": "list",
+          "cachedResultName": "Team",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/18UF4z_jisUgYOQ6Ki2un1kPwo0nP2eLRftbFUdLrAP0/edit#gid=1089818280"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        80
+      ],
+      "id": "75f585fb-8d9d-4628-b470-1be5fe2e7715",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hsbOv6fVvVRXIFyW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "18UF4z_jisUgYOQ6Ki2un1kPwo0nP2eLRftbFUdLrAP0",
+          "mode": "list",
+          "cachedResultName": "Team Tasks - per Employee",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/18UF4z_jisUgYOQ6Ki2un1kPwo0nP2eLRftbFUdLrAP0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Loop Over Items').item.json.Sheet }}",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        672,
+        0
+      ],
+      "id": "2e721287-ddb7-4c68-9deb-3f829250c85e",
+      "name": "Get row(s) in sheet1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hsbOv6fVvVRXIFyW",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Task-reminder workflow — Code node (runs inside the Loop Over Items, after reading each employee's tab)\n\nconst now = $now.setZone('Africa/Lagos');\nconst today = now.startOf('day');\nconst BOSS_EMAIL = 'prudentdan@gmail.com';                 // <-- set the boss's real email\nconst employee = $('Loop Over Items').item.json;       // current employee: Name, Email, Sheet\n\n// Who gets notified on this run (Luxon weekday: Mon=1 … Fri=5 … Sun=7)\nconst isBossRun  = (now.weekday === 1 || now.weekday === 4) && now.hour < 10;  // Mon & Thu 9am\nconst isEmployeeRun = (now.weekday === 4 && now.hour >= 10)                        // Thursday 10am\n                   || (now.weekday === 5 && now.hour >= 17);                        // Friday 5pm\n\nfunction parseDate(v) {\n  if (v === null || v === undefined || v === '') return null;\n  if (typeof v === 'number') return DateTime.fromObject({ year: 1899, month: 12, day: 30 }).plus({ days: v });\n  const s = String(v).trim();\n  let d = DateTime.fromISO(s);\n  if (d.isValid) return d;\n  for (const fmt of ['d/M/yyyy','M/d/yyyy','dd/MM/yyyy','MM/dd/yyyy','yyyy-MM-dd','d-MMM-yyyy','MMM d, yyyy','d MMM yyyy']) {\n    d = DateTime.fromFormat(s, fmt);\n    if (d.isValid) return d;\n  }\n  return null;\n}\n\nconst dueTasks = [];\nconst overdueTasks = [];\nfor (const r of $input.all().map(i => i.json)) {\n  if ((r.Status || '').toString().trim().toLowerCase() === 'done') continue;\n  const d = parseDate(r['Due Date']);\n  if (!d) continue;\n  const dd = d.startOf('day');\n  if (dd > today) continue;                            // ignore future tasks\n  const t = { task: r.Task, due: dd.toFormat('MMM d'), overdue: dd < today, priority: r.Priority || '' };\n  dueTasks.push(t);\n  if (dd < today) overdueTasks.push(t);\n}\n\nconst out = [];\n\n// 1) Employee reminder — only on Thursday 10am & Friday 5pm\nif (isEmployeeRun && dueTasks.length) {\n  const lines = dueTasks\n    .sort((a, b) => (a.overdue === b.overdue ? 0 : a.overdue ? -1 : 1))\n    .map(t => `• ${t.task} — due ${t.due}${t.overdue ? ' (OVERDUE)' : ''}${t.priority ? ' [' + t.priority + ']' : ''}`)\n    .join('\\n');\n  out.push({ json: {\n    to: employee.Email,\n    subject: `${dueTasks.length} task(s) need your attention`,\n    body: `Tasks needing attention:\\n\\n${lines}\\n\\nUpdate them in your sheet when done.`,\n  }});\n}\n\n// 2) Boss overdue alert — only on Monday & Thursday 9am\nif (isBossRun && overdueTasks.length) {\n  const lines = overdueTasks\n    .map(t => `• ${t.task} — was due ${t.due}${t.priority ? ' [' + t.priority + ']' : ''}`)\n    .join('\\n');\n  out.push({ json: {\n    to: BOSS_EMAIL,\n    subject: `Overdue: ${employee.Name} has ${overdueTasks.length} past-due task(s)`,\n    body: `${employee.Name} has tasks past their due date and not marked done:\\n\\n${lines}`,\n  }});\n}\n\nif (out.length === 0) return [{ json: { skip: true } }];   // keep the loop moving\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "54fbad56-9a46-4271-adf4-ae13e9e1ab53",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1328,
+        80
+      ],
+      "id": "4146f954-c163-4ba5-873f-55c1255c0629",
+      "name": "Send a message",
+      "webhookId": "0eb140dc-fb15-4353-8152-e727b917a66d",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tXU6nTqONWn4Yqb9",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                4
+              ],
+              "triggerAtHour": 10
+            },
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                5
+              ],
+              "triggerAtHour": 17
+            },
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * MON,THU"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        80
+      ],
+      "id": "0e670f68-736f-474e-9a95-d739bc1df6c6",
+      "name": "TaskTrigger"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f5a92e1f-0f36-4cad-9f31-35f0ddffea92",
+              "leftValue": "={{ $json.to }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1104,
+        0
+      ],
+      "id": "41ff2a01-d911-4b77-8eb8-9b2feeda8f92",
+      "name": "If"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TaskTrigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "Africa/Lagos",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "c17ea43f-f818-4eeb-b259-05d34523774a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e0ded2a90d3379c1cd06ed702f16799bfcfc6b97017f5870f7dd1a63d71b3c15"
+  },
+  "id": "ebysgCJpbBoHhHXC",
+  "tags": []
+}

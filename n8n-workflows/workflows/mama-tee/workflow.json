@@ -1,0 +1,827 @@
+{
+  "name": "Mama-Tee",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mama-tee",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        144
+      ],
+      "id": "56cad4ba-5cf9-49e2-8665-98355a27dea6",
+      "name": "Webhook",
+      "webhookId": "7133ef4a-8f6c-4080-b4ff-b19c0dc5a223"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawData = $input.first().json;\n\n// Handle all possible Vapi data structures\nconst body = rawData.body || rawData;\nconst message = body.message || body;\nconst artifact = message.artifact || body.artifact || rawData.artifact || {};\nconst call = message.call || body.call || rawData.call || {};\n\nconst transcript = \n  artifact.transcript || \n  message.transcript || \n  body.transcript || \n  rawData.transcript || \n  '';\n\nlet customerPhone = \n  (call.customer && call.customer.number) ? call.customer.number :\n  (message.customer && message.customer.number) ? message.customer.number :\n  (body.customer && body.customer.number) ? body.customer.number :\n  'Unknown';\nif (customerPhone === 'Unknown') {\n  const phoneMatch = transcript.match(/(?:phone number is|number is|call me on|reach me on) ([0-9\\s]+)/i);\n  if (phoneMatch && phoneMatch[1]) {\n    customerPhone = phoneMatch[1].replace(/\\s/g, '').trim();\n  }\n}\nconst text = transcript.toLowerCase();\n\nlet callType = 'General Inquiry';\nconst orderWords = ['order','jollof','fried rice','delivery','pickup','pounded yam','eba','amala','chicken','turkey','beef','fish','food','meal','eat','hungry','rice','soup','swallow'];\nconst reservationWords = ['reservation','reserve','book','table','seat'];\nconst callbackWords = ['call back','callback','call me back','someone will call'];\n\nif (orderWords.some(function(w) { return text.includes(w); })) {\n  callType = 'Order';\n} else if (reservationWords.some(function(w) { return text.includes(w); })) {\n  callType = 'Reservation';\n} else if (callbackWords.some(function(w) { return text.includes(w); })) {\n  callType = 'Callback Request';\n}\n\nlet customerName = 'Unknown';\nconst namePatterns = [\n  /my name is ([A-Za-z ]+?)(?:\\.|,|\\n|$)/i,\n  /i am ([A-Za-z ]+?)(?:\\.|,|\\n|$)/i,\n  /this is ([A-Za-z ]+?)(?:\\.|,|\\n|$)/i,\n  /call me ([A-Za-z ]+?)(?:\\.|,|\\n|$)/i\n];\nfor (let i = 0; i < namePatterns.length; i++) {\n  const match = transcript.match(namePatterns[i]);\n  if (match && match[1] && match[1].trim().length > 1) {\n    customerName = match[1].trim();\n    break;\n  }\n}\n\nlet orderDetails = '';\nconst orderMatch = transcript.match(/(?:my order is|i would like|i want|can i get|can i have|order|give me) ([^.?\\n]+)/i);\nif (orderMatch && orderMatch[1]) {\n  orderDetails = orderMatch[1].trim();\n}\n\nlet deliveryAddress = '';\nconst addressMatch = transcript.match(/(?:address is|deliver to|my address|location is|i live at) ([^.]+)/i);\nif (addressMatch && addressMatch[1]) {\n  deliveryAddress = addressMatch[1].trim();\n}\n\nlet orderType = '';\nif (text.includes('delivery') || text.includes('deliver')) {\n  orderType = 'Delivery';\n} else if (text.includes('pickup') || text.includes('pick up')) {\n  orderType = 'Pickup';\n}\n\nlet groupSize = '';\nconst groupMatch = transcript.match(/(\\d+) (?:people|persons|guests|of us)/i);\nif (groupMatch && groupMatch[1]) {\n  groupSize = groupMatch[1];\n}\n\nlet reservationDate = '';\nconst dateMatch = transcript.match(/(?:on|for|this|next) (monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|today)/i);\nif (dateMatch && dateMatch[0]) {\n  reservationDate = dateMatch[0].trim();\n}\n\nlet specialRequest = '';\nconst specialMatch = transcript.match(/(?:extra pepper|no pepper|no onion|extra sauce|well done|no salt|allergy|vegetarian)/i);\nif (specialMatch && specialMatch[0]) {\n  specialRequest = specialMatch[0].trim();\n}\n\nlet callbackQuestion = '';\nif (callType === 'Callback Request') {\n  callbackQuestion = transcript.substring(0, 300);\n}\n\nlet summary = '';\nif (callType === 'Order') {\n  summary = 'Order from ' + customerName + '. Items: ' + (orderDetails || 'unclear') + '. Type: ' + (orderType || 'unclear');\n} else if (callType === 'Reservation') {\n  summary = 'Reservation for ' + (groupSize || 'unknown') + ' people on ' + (reservationDate || 'unclear') + ' by ' + customerName;\n} else if (callType === 'Callback Request') {\n  summary = 'Callback requested by ' + customerName + '. Phone: ' + customerPhone;\n} else {\n  summary = 'General inquiry from ' + customerName;\n}\n\nreturn [{\n  json: {\n    callType: callType,\n    customerName: customerName,\n    customerPhone: customerPhone,\n    orderDetails: orderDetails,\n    deliveryAddress: deliveryAddress,\n    orderType: orderType,\n    groupSize: groupSize,\n    reservationDate: reservationDate,\n    specialRequest: specialRequest,\n    callbackQuestion: callbackQuestion,\n    summary: summary,\n    transcript: transcript,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        144
+      ],
+      "id": "62cb6767-f18c-4bc1-8ce2-a07a18baf5a9",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.callType }}",
+                    "rightValue": "Order",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "867fa727-0a98-4d9c-90be-e93da48610ff"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "6dd68786-504d-478a-8024-6793726dbdc8",
+                    "leftValue": "={{ $json.callType }}",
+                    "rightValue": "Reservation",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "b21ecba4-4a8a-4f6c-974b-633443af8405",
+                    "leftValue": "={{ $json.callType }}",
+                    "rightValue": "Callback Request",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "290c8a11-f283-424f-906c-54fd12505f23",
+                    "leftValue": "={{ $json.callType }}",
+                    "rightValue": "General Inquiry",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        112
+      ],
+      "id": "5c0376be-f82e-4c12-b50c-359ec69f13ae",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "chatId": "8394239499",
+        "text": "=🍽️ New Call Logged — Mama Tee's Kitchen!  📞 Type: {{ $json.callType }} 👤 Customer: {{ $json.customerName }} 📱 Phone: {{ $json.customerPhone }} 📝 Summary: {{ $json.summary }} 🕐 Time: {{ $json.timestamp }}  Check Airtable for full details!",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        896,
+        144
+      ],
+      "id": "b729ddc6-e165-41d1-bcb5-cead2f1aa83b",
+      "name": "Send a text message",
+      "webhookId": "9b4cb2f8-15d8-4a79-a8ea-0e6ea7e57799",
+      "credentials": {
+        "telegramApi": {
+          "id": "Wpja8ZERYtY0s8ej",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appqX2NyVCWNOTLN1",
+          "mode": "list",
+          "cachedResultName": "Mama Tee's Kitchen",
+          "cachedResultUrl": "https://airtable.com/appqX2NyVCWNOTLN1"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblCnwPvbsJjuw0qE",
+          "mode": "list",
+          "cachedResultName": "Orders",
+          "cachedResultUrl": "https://airtable.com/appqX2NyVCWNOTLN1/tblCnwPvbsJjuw0qE"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Customer Name": "={{ $json.customerName }}",
+            "Phone Number": "={{ $json.customerPhone }}",
+            "Order Details": "={{ $json.orderDetails }}",
+            "Delivery Address": "={{ $json.deliveryAddress }}",
+            "Status": "New",
+            "Timestamp": "={{  $json.timestamp }}",
+            "Order Type": "=Delivery"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Customer Name",
+              "displayName": "Customer Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Phone Number",
+              "displayName": "Phone Number",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Order Details",
+              "displayName": "Order Details",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Delivery Address",
+              "displayName": "Delivery Address",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Total Amount",
+              "displayName": "Total Amount",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Payment Method",
+              "displayName": "Payment Method",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Cash Transfer",
+                  "value": "Cash Transfer"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Order Type",
+              "displayName": "Order Type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Delivery ",
+                  "value": "Delivery "
+                },
+                {
+                  "name": "Pickup",
+                  "value": "Pickup"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "New",
+                  "value": "New"
+                },
+                {
+                  "name": "Confirmed",
+                  "value": "Confirmed"
+                },
+                {
+                  "name": "Delivered",
+                  "value": "Delivered"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        672,
+        -144
+      ],
+      "id": "2cd0463c-d327-4906-b914-7e2952f26406",
+      "name": "Orders Record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "f6hTZTwsvAswBmn3",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appqX2NyVCWNOTLN1",
+          "mode": "list",
+          "cachedResultName": "Mama Tee's Kitchen",
+          "cachedResultUrl": "https://airtable.com/appqX2NyVCWNOTLN1"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblofhcoHkVksn6vp",
+          "mode": "list",
+          "cachedResultName": "Reservations",
+          "cachedResultUrl": "https://airtable.com/appqX2NyVCWNOTLN1/tblofhcoHkVksn6vp"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Customer Name": "={{ $json.customerName }}",
+            "Status": "Pending",
+            "Timestamp": "={{  $json.timestamp }}",
+            "Special Request": "={{ $json.specialRequest }}",
+            "Date & Time": "={{  $json.reservationDate }}",
+            "Group Size": "={{ $json.groupSize }}",
+            "Phone Number": "={{ $json.phoneNumber }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Customer Name",
+              "displayName": "Customer Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Phone Number",
+              "displayName": "Phone Number",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Group Size",
+              "displayName": "Group Size",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Date & Time",
+              "displayName": "Date & Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Special Request",
+              "displayName": "Special Request",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pending",
+                  "value": "Pending"
+                },
+                {
+                  "name": "Confirmed",
+                  "value": "Confirmed"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        672,
+        48
+      ],
+      "id": "5cd4e927-cfcf-48b1-a1b7-137bc59acd3c",
+      "name": "Reservation records",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "f6hTZTwsvAswBmn3",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appqX2NyVCWNOTLN1",
+          "mode": "list",
+          "cachedResultName": "Mama Tee's Kitchen",
+          "cachedResultUrl": "https://airtable.com/appqX2NyVCWNOTLN1"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblVHpAI4wHuaLeKt",
+          "mode": "list",
+          "cachedResultName": "Callback Requests",
+          "cachedResultUrl": "https://airtable.com/appqX2NyVCWNOTLN1/tblVHpAI4wHuaLeKt"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Customer Name": "={{ $json.customerName }}",
+            "Phone Number": "={{ $json.customerPhone }}",
+            "Question": "={{ $json.callbackQuestion }}",
+            "Status": "Pending",
+            "Timestamp": "={{ $json.timestamp }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Customer Name",
+              "displayName": "Customer Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Phone Number",
+              "displayName": "Phone Number",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Question",
+              "displayName": "Question",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pending",
+                  "value": "Pending"
+                },
+                {
+                  "name": "Called Back",
+                  "value": "Called Back"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        672,
+        240
+      ],
+      "id": "680d2832-bf55-4a1c-afb2-e643bec3ace6",
+      "name": "Callback Requests records",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "f6hTZTwsvAswBmn3",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appqX2NyVCWNOTLN1",
+          "mode": "list",
+          "cachedResultName": "Mama Tee's Kitchen",
+          "cachedResultUrl": "https://airtable.com/appqX2NyVCWNOTLN1"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblVHpAI4wHuaLeKt",
+          "mode": "list",
+          "cachedResultName": "Callback Requests",
+          "cachedResultUrl": "https://airtable.com/appqX2NyVCWNOTLN1/tblVHpAI4wHuaLeKt"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Customer Name": "={{ $json.customerName }}",
+            "Phone Number": "={{ $json.customerPhone }}",
+            "Question": "={{ $json.callbackQuestion }}",
+            "Timestamp": "={{ $json.timestamp }}",
+            "Status": "Pending"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Customer Name",
+              "displayName": "Customer Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Phone Number",
+              "displayName": "Phone Number",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Question",
+              "displayName": "Question",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pending",
+                  "value": "Pending"
+                },
+                {
+                  "name": "Called Back",
+                  "value": "Called Back"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        672,
+        432
+      ],
+      "id": "29d1dfc4-fab9-4ce0-a2fa-4d153bef611d",
+      "name": "General inquiry records",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "f6hTZTwsvAswBmn3",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Orders Record",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reservation records",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Callback Requests records",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "General inquiry records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Orders Record": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reservation records": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback Requests records": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "General inquiry records": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "69a88016-4a9c-4e63-8d60-dcb9aebc9cd2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e0ded2a90d3379c1cd06ed702f16799bfcfc6b97017f5870f7dd1a63d71b3c15"
+  },
+  "id": "m3LM4t19XPIzQOsE",
+  "tags": []
+}

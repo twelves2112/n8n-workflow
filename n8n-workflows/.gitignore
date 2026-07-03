@@ -1,0 +1,16 @@
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# n8n local runtime files (if ever run locally in this repo)
+.n8n/
+n8n_data/
+
+# OS/editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+
+# Node (if any helper scripts are added later)
+node_modules/

@@ -1,0 +1,431 @@
+{
+  "name": "Email Classification",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const subject = ($input.first().json.Subject || $input.first().json.subject || '').toLowerCase();\nconst snippet = ($input.first().json.snippet || '').toLowerCase();\nconst from = $input.first().json.From || $input.first().json.from || '';\nconst allText = subject + ' ' + snippet;\n\nlet department = 'Other';\nlet confidence = 'Rule-Based';\n\n// SALES\nconst salesKeywords = [\n  'purchase', 'buy', 'order', 'pricing', 'quote', 'proposal',\n  'discount', 'offer', 'deal', 'product', 'interested',\n  'demo', 'trial', 'subscription', 'upgrade', 'package'\n];\n\n// CUSTOMER SERVICE\nconst customerKeywords = [\n  'complaint', 'issue', 'problem', 'help', 'support',\n  'broken', 'not working', 'refund', 'return', 'unhappy',\n  'disappointed', 'fix', 'error', 'bug', 'feedback', 'review'\n];\n\n// HUMAN RESOURCES\nconst hrKeywords = [\n  'job', 'career', 'application', 'resume', 'cv', 'hiring',\n  'vacancy', 'recruitment', 'interview', 'salary', 'employment',\n  'leave', 'absence', 'payroll', 'staff', 'employee', 'candidate'\n];\n\n// FINANCE\nconst financeKeywords = [\n  'invoice', 'payment', 'billing', 'receipt', 'tax',\n  'account', 'transaction', 'overdue', 'balance', 'audit',\n  'budget', 'expense', 'reimbursement', 'funds', 'transfer'\n];\n\n// OPERATIONS\nconst operationsKeywords = [\n  'delivery', 'shipment', 'logistics', 'supply', 'inventory',\n  'warehouse', 'dispatch', 'schedule', 'maintenance', 'facility',\n  'equipment', 'procurement', 'vendor', 'supplier', 'stock'\n];\n\n// Match department\nif (salesKeywords.some(k => allText.includes(k))) {\n  department = 'Sales';\n} else if (customerKeywords.some(k => allText.includes(k))) {\n  department = 'Customer Service';\n} else if (hrKeywords.some(k => allText.includes(k))) {\n  department = 'Human Resources';\n} else if (financeKeywords.some(k => allText.includes(k))) {\n  department = 'Finance';\n} else if (operationsKeywords.some(k => allText.includes(k))) {\n  department = 'Operations';\n}\n\nreturn [{\n  json: {\n    department: department,\n    confidence: confidence,\n    subject: $input.first().json.Subject || $input.first().json.subject || '',\n    from: from,\n    snippet: snippet,\n    emailId: $input.first().json.id,\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        288
+      ],
+      "id": "4f7dc7f7-090a-401e-a85e-3625003e5b28",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "readStatus": "unread"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        288
+      ],
+      "id": "478baeac-1a45-49c2-af3e-be7e3d222255",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tXU6nTqONWn4Yqb9",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.department }}",
+                    "rightValue": "Sales",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "a797b5d2-a3d3-47a4-bba2-c43147520ca0"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "09bbe95e-4f7a-4046-831a-9f296f59ea7c",
+                    "leftValue": "={{ $json.department }}",
+                    "rightValue": "Customer Service",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "08e2746e-047b-4267-a839-a562d77e1853",
+                    "leftValue": "={{ $json.department }}",
+                    "rightValue": "Human Resources",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "f715af85-6eac-416e-86b4-81f6cb9f4a5f",
+                    "leftValue": "={{ $json.department }}",
+                    "rightValue": "=Finance",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "032c488f-a84e-40be-a2f3-8c52d2be4054",
+                    "leftValue": "={{ $json.department }}",
+                    "rightValue": "Operations",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "57a1367d-64f2-4397-9c1d-0df8f30767b9",
+                    "leftValue": "={{ $json.department }}",
+                    "rightValue": "Other",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        224
+      ],
+      "id": "975b2fb3-8913-46cf-a81e-8b6aa7ab6869",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "sendTo": "marvellousadebayo76@gmail.com",
+        "subject": "=📬 [OTHER] {{ $json.other }}",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;\">   <div style=\"background:#1a1a2e;padding:24px;border-radius:12px 12px 0 0;\">     <h2 style=\"color:#00e676;margin:0;\">📧 New Email Classified</h2>   </div>   <div style=\"background:#f9f9f9;padding:24px;border-radius:0 0 12px 12px;\">     <table style=\"width:100%;border-collapse:collapse;\">       <tr style=\"background:#e8f5e9;\">         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Department</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.department }}</td>       </tr>       <tr>         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>From</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.from }}</td>       </tr>       <tr style=\"background:#e8f5e9;\">         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Subject</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.subject }}</td>       </tr>       <tr>         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Preview</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.snippet }}</td>       </tr>       <tr style=\"background:#e8f5e9;\">         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Classification</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.confidence }}</td>       </tr>     </table>     <p style=\"color:#666;margin-top:16px;\">This email was automatically classified by your n8n automation.</p>   </div> </div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        576
+      ],
+      "id": "1682501f-bc37-4624-bd54-1fdbac5f9278",
+      "name": "Send a message",
+      "webhookId": "e9f78b91-2d9d-4325-983a-8ebbf073165b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tXU6nTqONWn4Yqb9",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "marvellousadebayo76@gmail.com",
+        "subject": "=[SALES] {{ $json.subject }}",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;\">   <div style=\"background:#1a1a2e;padding:24px;border-radius:12px 12px 0 0;\">     <h2 style=\"color:#00e676;margin:0;\">📧 New Email Classified</h2>   </div>   <div style=\"background:#f9f9f9;padding:24px;border-radius:0 0 12px 12px;\">     <table style=\"width:100%;border-collapse:collapse;\">       <tr style=\"background:#e8f5e9;\">         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Department</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.department }}</td>       </tr>       <tr>         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>From</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.from }}</td>       </tr>       <tr style=\"background:#e8f5e9;\">         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Subject</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.subject }}</td>       </tr>       <tr>         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Preview</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.snippet }}</td>       </tr>       <tr style=\"background:#e8f5e9;\">         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Classification</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.confidence }}</td>       </tr>     </table>     <p style=\"color:#666;margin-top:16px;\">This email was automatically classified by your n8n automation.</p>   </div> </div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        -192
+      ],
+      "id": "80247357-0e9b-45e8-8c6a-78827e0d31da",
+      "name": "Send a message1",
+      "webhookId": "c85dc0bf-ee62-43dd-93e3-34078bce7acf",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tXU6nTqONWn4Yqb9",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "marvellousadebayo76@gmail.com",
+        "subject": "=📈 [SUPPORT] {{ $json.subject }}",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;\">   <div style=\"background:#1a1a2e;padding:24px;border-radius:12px 12px 0 0;\">     <h2 style=\"color:#00e676;margin:0;\">📧 New Email Classified</h2>   </div>   <div style=\"background:#f9f9f9;padding:24px;border-radius:0 0 12px 12px;\">     <table style=\"width:100%;border-collapse:collapse;\">       <tr style=\"background:#e8f5e9;\">         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Department</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.department }}</td>       </tr>       <tr>         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>From</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.from }}</td>       </tr>       <tr style=\"background:#e8f5e9;\">         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Subject</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.subject }}</td>       </tr>       <tr>         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Preview</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.snippet }}</td>       </tr>       <tr style=\"background:#e8f5e9;\">         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Classification</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.confidence }}</td>       </tr>     </table>     <p style=\"color:#666;margin-top:16px;\">This email was automatically classified by your n8n automation.</p>   </div> </div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "ca121975-e101-49e1-8abe-3689cbfde583",
+      "name": "Send a message2",
+      "webhookId": "e9f4db2a-86e2-44f6-97c9-aadf5961ecfa",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tXU6nTqONWn4Yqb9",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "marvellousadebayo76@gmail.com",
+        "subject": "=👥 [HR] {{ $json.subject }}",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;\">   <div style=\"background:#1a1a2e;padding:24px;border-radius:12px 12px 0 0;\">     <h2 style=\"color:#00e676;margin:0;\">📧 New Email Classified</h2>   </div>   <div style=\"background:#f9f9f9;padding:24px;border-radius:0 0 12px 12px;\">     <table style=\"width:100%;border-collapse:collapse;\">       <tr style=\"background:#e8f5e9;\">         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Department</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.department }}</td>       </tr>       <tr>         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>From</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.from }}</td>       </tr>       <tr style=\"background:#e8f5e9;\">         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Subject</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.subject }}</td>       </tr>       <tr>         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Preview</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.snippet }}</td>       </tr>       <tr style=\"background:#e8f5e9;\">         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Classification</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.confidence }}</td>       </tr>     </table>     <p style=\"color:#666;margin-top:16px;\">This email was automatically classified by your n8n automation.</p>   </div> </div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        192
+      ],
+      "id": "081d7e16-7824-4131-b20b-72761086d7eb",
+      "name": "Send a message3",
+      "webhookId": "45e9c1ce-7d53-4cff-a5c8-5f87a06b6942",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tXU6nTqONWn4Yqb9",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "marvellousadebayo76@gmail.com",
+        "subject": "=💰 [FINANCE] {{ $json.subject }}",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;\">   <div style=\"background:#1a1a2e;padding:24px;border-radius:12px 12px 0 0;\">     <h2 style=\"color:#00e676;margin:0;\">📧 New Email Classified</h2>   </div>   <div style=\"background:#f9f9f9;padding:24px;border-radius:0 0 12px 12px;\">     <table style=\"width:100%;border-collapse:collapse;\">       <tr style=\"background:#e8f5e9;\">         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Department</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.department }}</td>       </tr>       <tr>         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>From</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.from }}</td>       </tr>       <tr style=\"background:#e8f5e9;\">         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Subject</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.subject }}</td>       </tr>       <tr>         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Preview</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.snippet }}</td>       </tr>       <tr style=\"background:#e8f5e9;\">         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Classification</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.confidence }}</td>       </tr>     </table>     <p style=\"color:#666;margin-top:16px;\">This email was automatically classified by your n8n automation.</p>   </div> </div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        384
+      ],
+      "id": "0fd7724b-fc73-4d55-b950-82b271b098ec",
+      "name": "Send a message4",
+      "webhookId": "15afc7a1-e38b-45ef-a131-8369eaf9f265",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tXU6nTqONWn4Yqb9",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "marvellousadebayo76@gmail.com",
+        "subject": "=⚙️ [OPERATIONS] {{ $json.subject }}",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;\">   <div style=\"background:#1a1a2e;padding:24px;border-radius:12px 12px 0 0;\">     <h2 style=\"color:#00e676;margin:0;\">📧 New Email Classified</h2>   </div>   <div style=\"background:#f9f9f9;padding:24px;border-radius:0 0 12px 12px;\">     <table style=\"width:100%;border-collapse:collapse;\">       <tr style=\"background:#e8f5e9;\">         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Department</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.department }}</td>       </tr>       <tr>         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>From</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.from }}</td>       </tr>       <tr style=\"background:#e8f5e9;\">         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Subject</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.subject }}</td>       </tr>       <tr>         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Preview</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.snippet }}</td>       </tr>       <tr style=\"background:#e8f5e9;\">         <td style=\"padding:10px;border:1px solid #ddd;\"><strong>Classification</strong></td>         <td style=\"padding:10px;border:1px solid #ddd;\">{{ $json.confidence }}</td>       </tr>     </table>     <p style=\"color:#666;margin-top:16px;\">This email was automatically classified by your n8n automation.</p>   </div> </div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        768
+      ],
+      "id": "2756ce0d-bdcb-4015-b272-010ae94799ba",
+      "name": "Send a message5",
+      "webhookId": "288be1e5-e2f2-407d-819d-04680767e137",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tXU6nTqONWn4Yqb9",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "0c372250-d5f2-47da-8253-5a3700567df8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e0ded2a90d3379c1cd06ed702f16799bfcfc6b97017f5870f7dd1a63d71b3c15"
+  },
+  "id": "HWO9nLtyWNlJLamM",
+  "tags": [
+    {
+      "updatedAt": "2026-05-18T15:12:25.258Z",
+      "createdAt": "2026-05-18T15:12:25.258Z",
+      "id": "T1b7kSXM7WrGRr0I",
+      "name": "TS ACADEMY"
+    }
+  ]
+}

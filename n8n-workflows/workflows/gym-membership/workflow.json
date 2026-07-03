@@ -1,0 +1,894 @@
+{
+  "name": "Gym Membership",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gym-register",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -80,
+        -16
+      ],
+      "id": "b062aa35-5bbe-42cb-a6a0-97ef7c0358c1",
+      "name": "Webhook",
+      "webhookId": "fede6bbf-4540-461e-b11d-7afb74bdcfc4"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst plan = (body.plan || 'Monthly').toLowerCase();\n\nconst startDate = new Date();\nconst expiryDate = new Date();\n\nif (plan === 'monthly') {\n  expiryDate.setMonth(expiryDate.getMonth() + 1);\n} else if (plan === 'quarterly') {\n  expiryDate.setMonth(expiryDate.getMonth() + 3);\n} else if (plan === 'annual') {\n  expiryDate.setFullYear(expiryDate.getFullYear() + 1);\n}\n\nreturn [{\n  json: {\n    name: body.name,\n    email: body.email,\n    phone: body.phone,\n    plan: body.plan,\n    amount: body.amount,\n    status: 'Active',\n    startDate: startDate.toISOString().split('T')[0],\n    expiryDate: expiryDate.toISOString().split('T')[0],\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        -16
+      ],
+      "id": "59f48004-ee0b-4523-86cb-bb9bb307d8ef",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appWeSlMFp3QkLHcX",
+          "mode": "list",
+          "cachedResultName": "Gym Management",
+          "cachedResultUrl": "https://airtable.com/appWeSlMFp3QkLHcX"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblkYZlqIRRCmNx6O",
+          "mode": "list",
+          "cachedResultName": "MEMBERS",
+          "cachedResultUrl": "https://airtable.com/appWeSlMFp3QkLHcX/tblkYZlqIRRCmNx6O"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Members": "={{ $json.name }}",
+            "Email": "={{ $json.email  }}",
+            "Phone": "={{ $json.phone }}",
+            "Plan": "={{ $json.plan }}",
+            "Status": "={{ $json.status }}",
+            "Start Date": "={{ $json.startDate }}",
+            "Expiry Date": "={{ $json.expiryDate }}",
+            "Amount Paid": "={{ $json.amount }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Members",
+              "displayName": "Members",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Plan",
+              "displayName": "Plan",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Monthly",
+                  "value": "Monthly"
+                },
+                {
+                  "name": "Quarterly",
+                  "value": "Quarterly"
+                },
+                {
+                  "name": "Annual",
+                  "value": "Annual"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Active",
+                  "value": "Active"
+                },
+                {
+                  "name": "Expired",
+                  "value": "Expired"
+                },
+                {
+                  "name": "Pending",
+                  "value": "Pending"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Start Date",
+              "displayName": "Start Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Expiry Date",
+              "displayName": "Expiry Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Amount Paid",
+              "displayName": "Amount Paid",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        368,
+        -16
+      ],
+      "id": "5225a3ba-88fc-431b-ac05-c507705cee8a",
+      "name": "Create a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "f6hTZTwsvAswBmn3",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Create a record').item.json.fields['Email'] }}",
+        "subject": "=🏋️ Welcome to the Gym, {{ $('Create a record').item.json.fields['Name'] }}!",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;\">   <div style=\"background:#1a1a2e;padding:30px;text-align:center;border-radius:12px 12px 0 0;\">     <h1 style=\"color:#00e676;margin:0;\">🏋️ Welcome to the Gym!</h1>   </div>   <div style=\"background:#f9f9f9;padding:30px;border-radius:0 0 12px 12px;\">     <p>Hi <strong>{{ $('Code in JavaScript').item.json.name }}</strong>,</p>     <p>Your membership has been successfully registered!</p>     <table style=\"width:100%;border-collapse:collapse;margin:20px 0;\">       <tr style=\"background:#e8f5e9;\">         <td style=\"padding:12px;border:1px solid #ddd;\"><strong>Plan</strong></td>         <td style=\"padding:12px;border:1px solid #ddd;\">{{ $('Code in JavaScript').item.json.plan }}</td>       </tr>       <tr>         <td style=\"padding:12px;border:1px solid #ddd;\"><strong>Status</strong></td>         <td style=\"padding:12px;border:1px solid #ddd;color:green;\">Active ✅</td>       </tr>       <tr style=\"background:#e8f5e9;\">         <td style=\"padding:12px;border:1px solid #ddd;\"><strong>Start Date</strong></td>         <td style=\"padding:12px;border:1px solid #ddd;\">{{ $('Code in JavaScript').item.json.startDate }}</td>       </tr>       <tr>         <td style=\"padding:12px;border:1px solid #ddd;\"><strong>Expiry Date</strong></td>         <td style=\"padding:12px;border:1px solid #ddd;\">{{ $('Code in JavaScript').item.json.expiryDate }}</td>       </tr>     </table>     <p>See you at the gym! 💪</p>   </div> </div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        592,
+        -16
+      ],
+      "id": "53887424-df3e-428b-84e2-0756a3c73ead",
+      "name": "Send a message",
+      "webhookId": "be57fe7a-0f77-4996-87e1-7b726bfd64eb",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tXU6nTqONWn4Yqb9",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "8394239499",
+        "text": "=🏋️ New Member Registered!  👤 Name: {{ $('Code in JavaScript').item.json.name }} 📧 Email: {{ $('Code in JavaScript').item.json.email }} 📱 Phone: {{ $('Code in JavaScript').item.json.phone }} 💳 Plan: {{ $('Code in JavaScript').item.json.plan }} 📅 Start Date: {{ $('Code in JavaScript').item.json.startDate }} 📅 Expiry Date: {{ $('Code in JavaScript').item.json.expiryDate }} 💰 Amount: ₦{{ $('Code in JavaScript').item.json.amount }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        816,
+        -16
+      ],
+      "id": "44e09256-18c3-4731-983d-9d25ab0bb384",
+      "name": "Send a text message",
+      "webhookId": "0f35ecc1-bde2-4ad8-b246-10ff156af424",
+      "retryOnFail": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "Wpja8ZERYtY0s8ej",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -80,
+        208
+      ],
+      "id": "3bfad05d-ee1d-49bc-b5c4-c22aeb042fb9",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appWeSlMFp3QkLHcX",
+          "mode": "list",
+          "cachedResultName": "Gym Management",
+          "cachedResultUrl": "https://airtable.com/appWeSlMFp3QkLHcX"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblkYZlqIRRCmNx6O",
+          "mode": "list",
+          "cachedResultName": "MEMBERS",
+          "cachedResultUrl": "https://airtable.com/appWeSlMFp3QkLHcX/tblkYZlqIRRCmNx6O"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        144,
+        208
+      ],
+      "id": "bc526ea6-53a6-4524-9dc4-c7ce69e8e728",
+      "name": "Search records",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "h3xtSmbj1NYtjMN8",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "902db3f4-de14-4f9f-8b77-67b13de8739f",
+              "leftValue": "Condiion 1",
+              "rightValue": "={{ $json['Expiry Date'] }} is before {{ $now.plus({days: 3}).toISO() }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        368,
+        208
+      ],
+      "id": "4b1e49c9-94de-4e18-a6da-2a66be17a908",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a8eeb22f-4388-4d72-ad6d-8b8f27b93fdf",
+              "name": "recordId",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "c305cf14-8b85-478b-be1d-f8f4a246027c",
+              "name": "memberName",
+              "value": "={{ $json[\"Name\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "17182d7d-4a98-4641-a612-c5946edd5673",
+              "name": "memberEmail",
+              "value": "={{ $json[\"Email\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "c18535e5-3063-4928-ac51-11eac109ec90",
+              "name": "expiryDate",
+              "value": "={{ $json[\"ExpiryDate\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "b671c6d3-a704-4937-92f0-9293e0cd4428",
+              "name": "plan",
+              "value": "={{ $json[\"Plan\"] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        592,
+        208
+      ],
+      "id": "d162feb7-1a88-4490-a4a5-a5755121ed34",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.memberEmail }}",
+        "subject": "⚠️ Your Gym Subscription is Expiring Soon!",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;\">   <div style=\"background:#ff6d00;padding:30px;text-align:center;border-radius:12px 12px 0 0;\">     <h1 style=\"color:#fff;margin:0;\">⚠️ Subscription Expiring!</h1>   </div>   <div style=\"background:#f9f9f9;padding:30px;border-radius:0 0 12px 12px;\">     <p>Hi <strong>{{ $json.memberName }}</strong>,</p>     <p>Your <strong>{{ $json.plan }}</strong> gym subscription is expiring on      <strong>{{ $json.expiryDate }}</strong>.</p>     <p>Please renew your subscription to continue enjoying our facilities.</p>     <div style=\"text-align:center;margin:24px 0;\">       <a href=\"YOUR_RENEWAL_LINK\"           style=\"background:#ff6d00;color:#fff;padding:14px 28px;                 border-radius:8px;text-decoration:none;font-weight:bold;\">         Renew Now 🏋️       </a>     </div>     <p>Thank you for being a valued member!</p>   </div> </div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        816,
+        208
+      ],
+      "id": "eb32077b-ef84-4333-9fb7-3e6ece29d69b",
+      "name": "Send a message1",
+      "webhookId": "a499f344-8192-439f-a679-10385f3c1c01",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tXU6nTqONWn4Yqb9",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "8394239499",
+        "text": "=⚠️ Expiring Membership Alert!  👤 Member: {{ $json.memberName }} 📧 Email: {{ $json.memberEmail }} 💳 Plan: {{ $json.plan }} 📅 Expires: {{ $json.expiryDate }}  Please follow up with this member.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1040,
+        208
+      ],
+      "id": "778fcc0e-8538-4eaa-8138-11c68a034fac",
+      "name": "Send a text message1",
+      "webhookId": "f575b14e-1dbc-4092-8430-a0b77a40fa6b",
+      "credentials": {
+        "telegramApi": {
+          "id": "Wpja8ZERYtY0s8ej",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gym-renewal1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -80,
+        432
+      ],
+      "id": "c459f8a6-09bd-47e7-925e-1fd921192159",
+      "name": "Webhook1",
+      "webhookId": "f3d8fe1d-209b-43b5-b464-d2d4918c8042"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appWeSlMFp3QkLHcX",
+          "mode": "list",
+          "cachedResultName": "Gym Management",
+          "cachedResultUrl": "https://airtable.com/appWeSlMFp3QkLHcX"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblkYZlqIRRCmNx6O",
+          "mode": "list",
+          "cachedResultName": "MEMBERS",
+          "cachedResultUrl": "https://airtable.com/appWeSlMFp3QkLHcX/tblkYZlqIRRCmNx6O"
+        },
+        "filterByFormula": "=Email = \"{{ $json.body.email }}\"",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        144,
+        432
+      ],
+      "id": "346fc620-5911-494d-9631-8858fada517d",
+      "name": "Search records1",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "f6hTZTwsvAswBmn3",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhookData = $('Webhook').first().json.body;\nconst airtableRecord = $input.first().json;\nconst plan = (webhookData.plan || airtableRecord.Plan || 'Monthly').toLowerCase();\n\n// New start date is today\nconst startDate = new Date();\nconst expiryDate = new Date();\n\nif (plan === 'monthly') {\n  expiryDate.setMonth(expiryDate.getMonth() + 1);\n} else if (plan === 'quarterly') {\n  expiryDate.setMonth(expiryDate.getMonth() + 3);\n} else if (plan === 'annual') {\n  expiryDate.setFullYear(expiryDate.getFullYear() + 1);\n}\n\nreturn [{\n  json: {\n    recordId: airtableRecord.id,\n    memberName: airtableRecord['Members'],\n    memberEmail: airtableRecord['Email'],\n    memberPhone: airtableRecord['Phone'],\n    plan: webhookData.plan || airtableRecord['Plan'],\n    amount: webhookData.amount,\n    newStatus: 'Active',\n    newStartDate: startDate.toISOString().split('T')[0],\n    newExpiryDate: expiryDate.toISOString().split('T')[0],\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        432
+      ],
+      "id": "eeaf081a-94fc-4fa1-8f43-2d59967a5425",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appWeSlMFp3QkLHcX",
+          "mode": "list",
+          "cachedResultName": "Gym Management",
+          "cachedResultUrl": "https://airtable.com/appWeSlMFp3QkLHcX"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblkYZlqIRRCmNx6O",
+          "mode": "list",
+          "cachedResultName": "MEMBERS",
+          "cachedResultUrl": "https://airtable.com/appWeSlMFp3QkLHcX/tblkYZlqIRRCmNx6O"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.recordId }}",
+            "Amount Paid": "= {{ $json.amount }}",
+            "Status": "={{ $json.newStatus }}",
+            "Start Date": "={{ $json.newStartDate }}",
+            "Expiry Date": "={{ $json.newExpiryDate }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Members",
+              "displayName": "Members",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Plan",
+              "displayName": "Plan",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Monthly",
+                  "value": "Monthly"
+                },
+                {
+                  "name": "Quarterly",
+                  "value": "Quarterly"
+                },
+                {
+                  "name": "Annual",
+                  "value": "Annual"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Active",
+                  "value": "Active"
+                },
+                {
+                  "name": "Expired",
+                  "value": "Expired"
+                },
+                {
+                  "name": "Pending",
+                  "value": "Pending"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Start Date",
+              "displayName": "Start Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Expiry Date",
+              "displayName": "Expiry Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Amount Paid",
+              "displayName": "Amount Paid",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        592,
+        432
+      ],
+      "id": "1da6bc74-00ee-49a7-a4e5-228be557e7bd",
+      "name": "Update record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "f6hTZTwsvAswBmn3",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.memberEmail }}",
+        "subject": "🎉 Subscription Renewed Successfully!",
+        "message": "=<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;\">   <div style=\"background:#00c853;padding:30px;text-align:center;border-radius:12px 12px 0 0;\">     <h1 style=\"color:#fff;margin:0;\">🎉 Subscription Renewed!</h1>   </div>   <div style=\"background:#f9f9f9;padding:30px;border-radius:0 0 12px 12px;\">     <p>Hi <strong>{{ $json.memberName }}</strong>,</p>     <p>Your gym subscription has been successfully renewed! Here are your updated details:</p>     <table style=\"width:100%;border-collapse:collapse;margin:20px 0;\">       <tr style=\"background:#e8f5e9;\">         <td style=\"padding:12px;border:1px solid #ddd;\"><strong>Status</strong></td>         <td style=\"padding:12px;border:1px solid #ddd;color:green;\">Active ✅</td>       </tr>       <tr>         <td style=\"padding:12px;border:1px solid #ddd;\"><strong>Plan</strong></td>         <td style=\"padding:12px;border:1px solid #ddd;\">{{ $json.plan }}</td>       </tr>       <tr style=\"background:#e8f5e9;\">         <td style=\"padding:12px;border:1px solid #ddd;\"><strong>New Start Date</strong></td>         <td style=\"padding:12px;border:1px solid #ddd;\">{{ $json.newStartDate }}</td>       </tr>       <tr>         <td style=\"padding:12px;border:1px solid #ddd;\"><strong>New Expiry Date</strong></td>         <td style=\"padding:12px;border:1px solid #ddd;\">{{ $json.newExpiryDate }}</td>       </tr>     </table>     <p>Thank you for renewing. Keep up the great work! 💪</p>   </div> </div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        816,
+        432
+      ],
+      "id": "1ad78983-0b84-4946-b8f7-c1b52c6d52ff",
+      "name": "Send a message2",
+      "webhookId": "a0f64ecc-d73a-46b0-8a0a-ba6e5077dbe3",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tXU6nTqONWn4Yqb9",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "8394239499",
+        "text": "=🎉 Membership Renewed!  👤 Member: {{ $json.memberName }} 📧 Email: {{ $json.memberEmail }} 💳 Plan: {{ $json.plan }} 📅 New Start Date: {{ $json.newStartDate }} 📅 New Expiry Date: {{ $json.newExpiryDate }} 💰 Amount Paid: ₦{{ $json.amount }}  ✅ Status updated to Active",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1040,
+        432
+      ],
+      "id": "37dbcef4-058c-4ca2-a5be-ff570d9ce961",
+      "name": "Send a text message2",
+      "webhookId": "f29cf2ed-e991-4fe0-b22e-46a7c7a79cce",
+      "credentials": {
+        "telegramApi": {
+          "id": "Wpja8ZERYtY0s8ej",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Create a record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a record": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Search records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message1": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Search records1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Update record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update record": {
+      "main": [
+        [
+          {
+            "node": "Send a message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message2": {
+      "main": [
+        [
+          {
+            "node": "Send a text message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "3be6d6f5-6eb9-41fd-b500-dd0d61c86af6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e0ded2a90d3379c1cd06ed702f16799bfcfc6b97017f5870f7dd1a63d71b3c15"
+  },
+  "id": "YjDUIsGj2KFhskrc",
+  "tags": [
+    {
+      "updatedAt": "2026-05-18T15:12:25.258Z",
+      "createdAt": "2026-05-18T15:12:25.258Z",
+      "id": "T1b7kSXM7WrGRr0I",
+      "name": "TS ACADEMY"
+    }
+  ]
+}
