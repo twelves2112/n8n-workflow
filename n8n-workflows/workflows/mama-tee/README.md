@@ -1,4 +1,4 @@
-# Mama-Tee
+# Restaurant Order & Reservation Workflow (Vapi)
 
 ## Overview
 Receives call data from a Vapi voice AI agent for "Mama Tee's Kitchen" (a restaurant), parses the call transcript with regex to classify and extract structured details, logs the result into the appropriate Airtable table, and posts a summary to Telegram for staff.
