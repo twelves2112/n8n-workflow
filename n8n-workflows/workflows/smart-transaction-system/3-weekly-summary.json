@@ -1,0 +1,362 @@
+{
+  "name": "STS summary",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                5
+              ],
+              "triggerAtHour": 19
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -192,
+        -16
+      ],
+      "id": "656aaf3f-42bc-4727-8875-1c5eddb63512",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "chatId": "-1003156992220",
+        "text": "={{ $json.content[0].text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        784,
+        -16
+      ],
+      "id": "356ccf15-096e-4ea4-84ca-aac465d39daa",
+      "name": "Send a text message",
+      "webhookId": "b3cee170-09e6-4501-8bd6-9d679888b817",
+      "credentials": {
+        "telegramApi": {
+          "id": "Wpja8ZERYtY0s8ej",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json.fields || i.json);\n\nlet spent = 0, received = 0, impulseCount = 0, txCount = 0;\nconst byCategory = {}, bySpendType = {};\nlet biggest = { amount: 0, merchant: \"\", category: \"\" };\n\nfor (const r of rows) {\n  const amount = Number(r.Amount) || 0;\n  const type = (r.Type || \"\").toLowerCase();\n  if (r[\"Self transfer\"] === true) continue;   // ignore own-account moves\n  txCount++;\n  if (type === \"debit\") {\n    spent += amount;\n    const cat = r.Category || \"Other\";\n    byCategory[cat] = (byCategory[cat] || 0) + amount;\n    const st = r[\"Spend type\"] || \"Unclassified\";\n    bySpendType[st] = (bySpendType[st] || 0) + amount;\n    if (amount > biggest.amount) biggest = { amount, merchant: r.Merchant || \"\", category: cat };\n    if (r[\"Impulse Flag\"] === true) impulseCount++;\n  } else if (type === \"credit\") {\n    received += amount;\n  }\n}\n\nconst fmt = n => \"₦\" + Number(n).toLocaleString();\nconst cats = Object.entries(byCategory).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k}: ${fmt(v)}`).join(\", \");\nconst sts  = Object.entries(bySpendType).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k}: ${fmt(v)}`).join(\", \");\n\nconst dataSummary =\n`Total spent (excluding self-transfers): ${fmt(spent)}\nTotal received: ${fmt(received)}\nNet: ${fmt(received - spent)}\nTransactions: ${txCount}\nBy category: ${cats || \"none\"}\nBy need/want: ${sts || \"none\"}\nBiggest purchase: ${fmt(biggest.amount)} at ${biggest.merchant} (${biggest.category})\nImpulse-flagged: ${impulseCount}`;\n\nconst past = $('Recommendations (4 weeks)').all()\n  .map(r => (r.json.fields || r.json).Advice)\n  .filter(Boolean)\n  .join(\"\\n---\\n\");\n\nreturn [{ json: { dataSummary, pastAdvice: past || \"No past advice yet.\" } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        -16
+      ],
+      "id": "8bc6ac29-df77-4dbc-b7d5-d763015cfdde",
+      "name": "Aggregate week's transactions"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "claude-sonnet-4-6",
+          "mode": "list",
+          "cachedResultName": "claude-sonnet-4-6"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.dataSummary }}"
+            }
+          ]
+        },
+        "options": {
+          "system": "You are a personal finance coach for one person. Each week you receive a summary of their spending and income for the past 7 days. Write a short, warm, honest weekly review they'll read on their phone in Telegram.  Ground your observations in these principles (paraphrased from \"The Psychology of Money\" by Morgan Housel and \"The Intelligent Investor\" by Benjamin Graham): - Wealth is the money you DON'T spend — what you keep, not what you show. (Housel) - Your savings rate matters more than your income or your investment returns. (Housel) - Manage money so you can sleep at night; reasonable beats coldly rational. (Housel) - Leave room for error — a margin of safety protects you from surprises. (Graham) - Your worst enemy with money is usually yourself — emotion, not math, does the damage. (Graham) - Don't let mood and impulse (\"Mr. Market\") drive your decisions. (Graham) - Real wealth buys control over your time, not more stuff. (Housel)  Structure — keep the WHOLE thing under ~200 words, a few short sections: 📊 Headline: one line on spent vs received and the net. 💸 Where it went: 2-3 lines on top categories and the Need/Want split. 👀 Watch this: the single biggest leak or impulse pattern, named gently but honestly. 🎯 This week's nudge: one concrete, doable suggestion tied to ONE principle above — name the idea (e.g. \"Housel's point that wealth is what you don't spend...\").  Rules: - Use their actual figures. Be specific. - Encouraging, never shaming — a coach, not a critic. - If the week was healthy, say so and celebrate it. Don't invent problems. - Plain text for Telegram; a few emoji as section markers\nYou may receive PAST ADVICE you gave in previous weeks. If present, briefly note whether this week's numbers suggest the person acted on it — celebrate genuine improvement, and gently re-raise anything that got worse. If there's no past advice, skip this and just give a fresh review. Never invent past advice that wasn't provided.\n\n\n\n is fine."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        432,
+        -16
+      ],
+      "id": "da716831-c834-48af-8919-469cbaa61a21",
+      "name": "Claude Coach",
+      "credentials": {
+        "anthropicApi": {
+          "id": "vhje0ZwJdmqDHs1r",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appvLlyTF8IbOdC89",
+          "mode": "list",
+          "cachedResultName": "TRANSACTION SYSTEM",
+          "cachedResultUrl": "https://airtable.com/appvLlyTF8IbOdC89"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblQvfO5g3Ip34AWf",
+          "mode": "list",
+          "cachedResultName": "Transactions",
+          "cachedResultUrl": "https://airtable.com/appvLlyTF8IbOdC89/tblQvfO5g3Ip34AWf"
+        },
+        "filterByFormula": "IS_AFTER({Date}, DATEADD(TODAY(), -29, 'days'))",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        16,
+        -16
+      ],
+      "id": "6381848d-b868-4c10-a6fb-54d250642b94",
+      "name": "Recommendations (4 weeks)",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "f6hTZTwsvAswBmn3",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appvLlyTF8IbOdC89",
+          "mode": "list",
+          "cachedResultName": "TRANSACTION SYSTEM",
+          "cachedResultUrl": "https://airtable.com/appvLlyTF8IbOdC89"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl7lJCa0OnxQnL6p",
+          "mode": "list",
+          "cachedResultName": "Recommendations",
+          "cachedResultUrl": "https://airtable.com/appvLlyTF8IbOdC89/tbl7lJCa0OnxQnL6p"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $now }}",
+            "Trigger": "Weekly summary",
+            "Advice": "={{ $('Claude Coach').item.json.content[0].text }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Trigger",
+              "displayName": "Trigger",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Impulse alert",
+                  "value": "Impulse alert"
+                },
+                {
+                  "name": "Weekly summary",
+                  "value": "Weekly summary"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Advice",
+              "displayName": "Advice",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Book principle",
+              "displayName": "Book principle",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Linked transactions",
+              "displayName": "Linked transactions",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Followed?",
+              "displayName": "Followed?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Yes",
+                  "value": "Yes"
+                },
+                {
+                  "name": "No",
+                  "value": "No"
+                },
+                {
+                  "name": "Partially",
+                  "value": "Partially"
+                },
+                {
+                  "name": "Pending",
+                  "value": "Pending"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Outcome notes",
+              "displayName": "Outcome notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        992,
+        -16
+      ],
+      "id": "99675a95-fc79-41e9-bbdc-8ed98d9317bc",
+      "name": "Create a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "f6hTZTwsvAswBmn3",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Recommendations (4 weeks)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate week's transactions": {
+      "main": [
+        [
+          {
+            "node": "Claude Coach",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Coach": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recommendations (4 weeks)": {
+      "main": [
+        [
+          {
+            "node": "Aggregate week's transactions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        [
+          {
+            "node": "Create a record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "Africa/Lagos",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "58b872a8-5ff7-4e85-adb4-271e958c0848",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e0ded2a90d3379c1cd06ed702f16799bfcfc6b97017f5870f7dd1a63d71b3c15"
+  },
+  "id": "2XvMclsrib2t8cPW",
+  "tags": []
+}

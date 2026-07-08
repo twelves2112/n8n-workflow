@@ -1,0 +1,1070 @@
+{
+  "name": "Smart Transaction System",
+  "nodes": [
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "claude-haiku-4-5-20251001",
+          "mode": "list",
+          "cachedResultName": "claude-haiku-4-5-20251001"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.text }}"
+            }
+          ]
+        },
+        "options": {
+          "system": "You are a transaction parser for a personal finance system. You receive the plain-text body of a bank or fintech alert email. Extract the details and return ONLY valid JSON — no markdown, no code fences, no commentary.  Return exactly this structure: {   \"is_transaction\": boolean,   \"transaction_date\": string,   \"amount\": number,   \"currency\": string,   \"merchant\": string,   \"transaction_type\": string,  \"self_transfer\": boolean, \"category\": string,   \"spend_type\": string }  \nRules: - is_transaction is true ONLY if money actually moved in or out (payment,   transfer, withdrawal, deposit, received funds). \n- self_transfer: true if the money is moving between the account holder's own\n  accounts — i.e. the other party's name matches the account holder. The\n  account holder is Adebayo Marvellous Olumide (also appears as Marvellous\n  Olumide Adebayo or any ordering of those names). If the recipient or sender\n  name is the account holder themselves, set self_transfer to true. Otherwise\n  set it to false. A payment to any other person or business is false.\nFor passkey setups, email   or security notices, login alerts, promotions, or statements, set   is_transaction to false and every other field to null. - transaction_type: \"debit\" if money left the account — phrases like \"your   transfer of X is successful\", \"sent\", \"paid\", \"withdrawn\", \"debit\". A   transfer with a recipient Name/Bank is a debit. \"credit\" if money came in —   \"received\", \"deposited\", \"credit\", \"refund\". - amount: a plain number only. Strip currency symbols and commas, so   \"₦1,100.00\" becomes 1100. - If the email shows both a transaction amount and an account balance,   extract ONLY the transaction amount. Never use the available balance,   current balance, or ledger balance as the amount. - merchant: the other party — who was paid, or who sent the money. If the   description is full of reference codes, pull the human-readable name out. - category: pick one best fit — Groceries, Transport, Eating out, Bills,   Airtime/Data, Shopping, Transfer, Salary, Refund, Other. - spend_type applies ONLY to debits. For every credit, set spend_type to null.   For debits you MUST choose one — never leave it null. Infer from the   merchant and category:     Need       → rent, utilities, groceries, transport, data/airtime, fees, medical     Want       → eating out, entertainment, shopping, subscriptions, gadgets     Saving     → money moved into a savings or fixed-deposit account     Investment → money moved into stocks, mutual funds, crypto, or a brokerage   If a debit is genuinely ambiguous, default to \"Want\". - transaction_date: use ISO 8601 format, e.g. \"2026-06-18T08:49:17\". - If a value is genuinely absent, use null. Never invent amounts, dates, or names. - If no time appears in the email, use the date at T00:00:00. - Output JSON only.\n\n- category: infer the PURPOSE of the transaction from the merchant/recipient\n  name and any description text. Choose exactly one:\n    Bill        → utilities, electricity (e.g. IKEDC, EKO ELECTRIC, DISCO), water, cable/DSTV, internet\n    Airtime/Data → telecoms: MTN, GLO, AIRTEL, 9MOBILE, or \"airtime\"/\"data\" in text\n    Rent        → if the description or recipient clearly indicates rent/housing\n    Food        → restaurants, eateries, food vendors, supermarkets, \"chicken\", \"kitchen\", \"foods\"\n    Transport   → ride-hailing (Bolt, Uber), fuel stations, transport fares\n    Purchase    → shops, stores, online merchants, general goods\n    Gift        → if description mentions gift, or clearly a present\n    Savings     → transfers into a savings/investment platform (PiggyVest, Cowrywise, etc.)\n    Other       → genuinely unclear, especially a transfer to an individual\n      person's name with no other clue\n  When the recipient is a BUSINESS name, use its type to pick. When it's an\n  individual's personal name with no other signal, use \"Other\" rather than\n  guessing wildly — do not assume."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        256,
+        -672
+      ],
+      "id": "a7898b10-5a50-4a27-a7d3-78f7eb5b6a62",
+      "name": "Message a model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "vhje0ZwJdmqDHs1r",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7e4459cc-9b64-4334-aa10-9bafdb356d04",
+              "leftValue": "={{ $json.is_transaction }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        816,
+        -672
+      ],
+      "id": "95f154dd-2885-4d39-bcf9-5b1382b8f422",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.transaction_type }}",
+                    "rightValue": "debit",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "43d32483-a41b-497d-9fc9-8c97164f0945"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "95387a8f-24ab-497b-a7ee-dd8a25db2f9d",
+                    "leftValue": "={{ $json.transaction_type }}",
+                    "rightValue": "credit",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1488,
+        -688
+      ],
+      "id": "de6c2350-dd6d-4988-8526-dd6a10096282",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "jsCode": "const tx = $('Code').first().json;        // parser node — confirm it's named \"Code\"\nconst amount = Number(tx.amount) || 0;\n\n// active declarations — name must match your renamed node exactly\nconst declarations = $('Get Pre-declared').all().map(d => d.json.fields || d.json);\n\nlet matchedDeclaration = null;\nfor (const d of declarations) {\n  const expected = Number(d[\"Expected Amount\"]) || 0;\n  if (Math.abs(expected - amount) <= 2000) {\n    matchedDeclaration = d;\n    break;\n  }\n}\nconst isPreDeclared = matchedDeclaration !== null;\n\n// today's debit count — pull explicitly from the count node by name\nconst countToday = $('Count Today\\'s Debits').all().length;\n\nconst category = (tx.category || \"\").toLowerCase();\nconst selfTransfer = tx.self_transfer === true;\n\nlet reasons = [];\nif (!selfTransfer && !isPreDeclared) {\n  if (amount >= 20000) reasons.push(`Large purchase of ₦${amount.toLocaleString()}`);\n  if ([\"shopping\", \"eating out\"].includes(category)) reasons.push(`${tx.category} spend`);\n  if (countToday >= 5) reasons.push(`${countToday} debits already today`);\n}\n\nreturn [{\n  json: {\n    ...tx,\n    is_impulse: reasons.length > 0,\n    impulse_reason: reasons.join(\"; \"),\n    count_today: countToday,\n    is_pre_declared: isPreDeclared,\n    matched_id: matchedDeclaration ? matchedDeclaration.id : null\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2384,
+        -672
+      ],
+      "id": "9b620682-3945-4c75-8a5f-90f72fe675db",
+      "name": "Impulse Check"
+    },
+    {
+      "parameters": {
+        "jsCode": "let raw = $input.first().json.content[0].text;\nraw = raw.replace(/```json/g, \"\").replace(/```/g, \"\").trim();\nconst parsed = JSON.parse(raw);\n\n// Translate sender address → clean bank name\nconst senderAddress = $('Gmail Trigger').first().json.from.value[0].address;\n\nconst bankMap = {\n  \"no-reply@opay-nigeria.com\": \"OPay\",\n  \"gens@gtbank.com\": \"GTBank\",\n  \"no-reply@kuda.com\": \"Kuda Bank\",\n  \"e-business@sterling.ng\": \"Sterling Bank\",\n  \"no-reply@ubagroup.com\": \"UBA Bank\",\n};\n\nparsed.bank_from = bankMap[senderAddress] || \"Other\";\n\nreturn parsed;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        -672
+      ],
+      "id": "ba160f49-14f2-453c-a0d8-191fd2b8fa2d",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "299dda62-c4f5-4a89-8bdc-2a676778c7cc",
+              "leftValue": "={{ $json.is_impulse }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2608,
+        -576
+      ],
+      "id": "76fc10ff-76d2-4aec-9766-c73d7d91c4f2",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "labelIds": [
+            "Label_5793219719403137316"
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        32,
+        -672
+      ],
+      "id": "34ce0aec-8208-4269-b52f-2cda7d8f62e3",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tXU6nTqONWn4Yqb9",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appvLlyTF8IbOdC89",
+          "mode": "list",
+          "cachedResultName": "TRANSACTION SYSTEM",
+          "cachedResultUrl": "https://airtable.com/appvLlyTF8IbOdC89"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblQvfO5g3Ip34AWf",
+          "mode": "list",
+          "cachedResultName": "Transactions",
+          "cachedResultUrl": "https://airtable.com/appvLlyTF8IbOdC89/tblQvfO5g3Ip34AWf"
+        },
+        "filterByFormula": "AND({Type}='debit', IS_SAME({Date}, TODAY(), 'day'))",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1936,
+        -672
+      ],
+      "id": "eb7ae557-49df-4a9e-88b4-0f5dd3027225",
+      "name": "Count Today's Debits",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "f6hTZTwsvAswBmn3",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appvLlyTF8IbOdC89",
+          "mode": "list",
+          "cachedResultName": "TRANSACTION SYSTEM",
+          "cachedResultUrl": "https://airtable.com/appvLlyTF8IbOdC89"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbll9CegOPdHDnz4h",
+          "mode": "list",
+          "cachedResultName": "Pre-declared",
+          "cachedResultUrl": "https://airtable.com/appvLlyTF8IbOdC89/tbll9CegOPdHDnz4h"
+        },
+        "filterByFormula": "AND({Status}='Pending', IS_AFTER({Valid until}, TODAY()))",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2160,
+        -672
+      ],
+      "id": "ed05795b-0455-46ba-9864-672c56ff2232",
+      "name": "Get Pre-declared",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "f6hTZTwsvAswBmn3",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appvLlyTF8IbOdC89",
+          "mode": "list",
+          "cachedResultName": "TRANSACTION SYSTEM",
+          "cachedResultUrl": "https://airtable.com/appvLlyTF8IbOdC89"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblQvfO5g3Ip34AWf",
+          "mode": "list",
+          "cachedResultName": "Transactions",
+          "cachedResultUrl": "https://airtable.com/appvLlyTF8IbOdC89/tblQvfO5g3Ip34AWf"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Impulse Flag": false,
+            "Self transfer": false,
+            "Date": "={{ $json.transaction_date }}",
+            "Type": "={{ $json.transaction_type }}",
+            "Amount": "={{ $json.amount }}",
+            "Merchant": "={{ $json.merchant }}",
+            "Bank": "={{ $json.bank_from }}",
+            "Category": "={{ $json.category }}",
+            "Spend Type": "={{ $json.spend_type }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Transaction ID",
+              "displayName": "Transaction ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Type",
+              "displayName": "Type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "debit",
+                  "value": "debit"
+                },
+                {
+                  "name": "credit",
+                  "value": "credit"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Amount",
+              "displayName": "Amount",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Merchant",
+              "displayName": "Merchant",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Bank",
+              "displayName": "Bank",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "GTBank",
+                  "value": "GTBank"
+                },
+                {
+                  "name": "Sterling Bank",
+                  "value": "Sterling Bank"
+                },
+                {
+                  "name": "Kuda Bank",
+                  "value": "Kuda Bank"
+                },
+                {
+                  "name": "Uba Bank",
+                  "value": "Uba Bank"
+                },
+                {
+                  "name": "OPay",
+                  "value": "OPay"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Groceries",
+                  "value": "Groceries"
+                },
+                {
+                  "name": "Transport",
+                  "value": "Transport"
+                },
+                {
+                  "name": "Eating out",
+                  "value": "Eating out"
+                },
+                {
+                  "name": "Bills",
+                  "value": "Bills"
+                },
+                {
+                  "name": "Airtime/Data",
+                  "value": "Airtime/Data"
+                },
+                {
+                  "name": "Shopping",
+                  "value": "Shopping"
+                },
+                {
+                  "name": "Transfer",
+                  "value": "Transfer"
+                },
+                {
+                  "name": "Salary",
+                  "value": "Salary"
+                },
+                {
+                  "name": "Refund",
+                  "value": "Refund"
+                },
+                {
+                  "name": "Other",
+                  "value": "Other"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Spend Type",
+              "displayName": "Spend Type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Investment",
+                  "value": "Investment"
+                },
+                {
+                  "name": "Need",
+                  "value": "Need"
+                },
+                {
+                  "name": "Saving",
+                  "value": "Saving"
+                },
+                {
+                  "name": "want",
+                  "value": "want"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Impulse Flag",
+              "displayName": "Impulse Flag",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Pre-declared",
+              "displayName": "Pre-declared",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Raw email",
+              "displayName": "Raw email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Logged at",
+              "displayName": "Logged at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Recommendations",
+              "displayName": "Recommendations",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Self transfer",
+              "displayName": "Self transfer",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1712,
+        -672
+      ],
+      "id": "73b81ea0-db21-456b-bd2d-a0a3073afdcf",
+      "name": "Transaction Rows",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "f6hTZTwsvAswBmn3",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appvLlyTF8IbOdC89",
+          "mode": "list",
+          "cachedResultName": "TRANSACTION SYSTEM",
+          "cachedResultUrl": "https://airtable.com/appvLlyTF8IbOdC89"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbll9CegOPdHDnz4h",
+          "mode": "list",
+          "cachedResultName": "Pre-declared",
+          "cachedResultUrl": "https://airtable.com/appvLlyTF8IbOdC89/tbll9CegOPdHDnz4h"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "Matched",
+            "id": "={{ $json.matched_id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Expected Amount",
+              "displayName": "Expected Amount",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "",
+                  "value": ""
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Declared on",
+              "displayName": "Declared on",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Valid until",
+              "displayName": "Valid until",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Transactions",
+              "displayName": "Transactions",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pending",
+                  "value": "Pending"
+                },
+                {
+                  "name": "Matched",
+                  "value": "Matched"
+                },
+                {
+                  "name": "Expired",
+                  "value": "Expired"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2832,
+        -768
+      ],
+      "id": "515c4ebd-650c-4d48-a1b7-d0eb5393fd80",
+      "name": "Mark Matched",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "f6hTZTwsvAswBmn3",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e7cd2a21-1d51-4bad-bc88-e459bdf9157a",
+              "leftValue": "={{ $json.matched_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2608,
+        -768
+      ],
+      "id": "2065e7f6-92fb-4fe0-a0e6-b7ffbd394369",
+      "name": "Matched Id_ not empty"
+    },
+    {
+      "parameters": {
+        "chatId": "-1003156992220",
+        "text": "=🚨 Spending alert  You spent ₦{{ $json.amount }} at {{ $json.merchant }}. Flagged because: {{ $json.impulse_reason }}  Was this one planned?",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2832,
+        -576
+      ],
+      "id": "6fce4568-21bd-406c-8c2c-7024cc6378db",
+      "name": "Send a message",
+      "webhookId": "6d3aa51f-535f-4b3a-9cd6-bda84effb20b",
+      "credentials": {
+        "telegramApi": {
+          "id": "Wpja8ZERYtY0s8ej",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const tx = $('Code').first().json;\nconst known = $('Lookup(Merchant Map)').all().map(m => m.json.fields || m.json);\nif (known.length > 0 && known[0].Category) {\n  tx.category = known[0].Category;   // memory table wins\n}\nreturn [{ json: tx }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1264,
+        -672
+      ],
+      "id": "eeefde16-7355-4d69-8bcb-f422ae191a41",
+      "name": "Merchant lookup code"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appvLlyTF8IbOdC89",
+          "mode": "list",
+          "cachedResultName": "TRANSACTION SYSTEM",
+          "cachedResultUrl": "https://airtable.com/appvLlyTF8IbOdC89"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblgAYT2Nx9d04f7S",
+          "mode": "list",
+          "cachedResultName": "Merchant Map",
+          "cachedResultUrl": "https://airtable.com/appvLlyTF8IbOdC89/tblgAYT2Nx9d04f7S"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Merchant": "={{ $json.merchant }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Merchant",
+              "displayName": "Merchant",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1056,
+        -688
+      ],
+      "id": "cb1a1c3f-2756-4022-92d5-1ecf50a8cbde",
+      "name": "Lookup(Merchant Map)",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "f6hTZTwsvAswBmn3",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Lookup(Merchant Map)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Transaction Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Impulse Check": {
+      "main": [
+        [
+          {
+            "node": "Matched Id_ not empty",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count Today's Debits": {
+      "main": [
+        [
+          {
+            "node": "Get Pre-declared",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Pre-declared": {
+      "main": [
+        [
+          {
+            "node": "Impulse Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transaction Rows": {
+      "main": [
+        [
+          {
+            "node": "Count Today's Debits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Matched Id_ not empty": {
+      "main": [
+        [
+          {
+            "node": "Mark Matched",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merchant lookup code": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup(Merchant Map)": {
+      "main": [
+        [
+          {
+            "node": "Merchant lookup code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "fc3b2ae3-7a70-44e3-9cf8-1fc12f188c0c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e0ded2a90d3379c1cd06ed702f16799bfcfc6b97017f5870f7dd1a63d71b3c15"
+  },
+  "id": "6lXFlmG1LuZhiT40",
+  "tags": []
+}

@@ -1,0 +1,243 @@
+{
+  "name": "Pre-declared form (STS)",
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "basicAuth",
+        "formTitle": "Declare a Purchase",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Description",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Amount",
+              "fieldType": "number"
+            },
+            {
+              "fieldLabel": "Days",
+              "fieldType": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "835a252f-e966-47af-9eab-25f42686e998",
+      "name": "On form submission",
+      "webhookId": "b50d0c89-9c33-4c01-a44f-a5a30f98d75c",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "cWn2xbFGFkddMVJb",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const f = $input.first().json;\nconst days = Number(f.Days) || 7;\nconst validUntil = new Date(Date.now() + days * 86400000);\nreturn [{\n  json: {\n    description: f.Description,\n    expected_amount: Number(f.Amount),\n    declared_on: new Date().toISOString().split('T')[0],\n    valid_until: validUntil.toISOString().split('T')[0],\n    status: 'Pending'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "dd0ca73d-a733-49f6-9be9-f819e27a5672",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appvLlyTF8IbOdC89",
+          "mode": "list",
+          "cachedResultName": "TRANSACTION SYSTEM",
+          "cachedResultUrl": "https://airtable.com/appvLlyTF8IbOdC89"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbll9CegOPdHDnz4h",
+          "mode": "list",
+          "cachedResultName": "Pre-declared",
+          "cachedResultUrl": "https://airtable.com/appvLlyTF8IbOdC89/tbll9CegOPdHDnz4h"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Description": "={{ $json.description }}",
+            "Expected Amount": "={{ $json.expected_amount }}",
+            "Category": "=",
+            "Declared on": "={{ $json.declared_on }}",
+            "Valid until": "={{ $json.valid_until }}",
+            "Status": "={{ $json.status }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Expected Amount",
+              "displayName": "Expected Amount",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "",
+                  "value": ""
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Declared on",
+              "displayName": "Declared on",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Valid until",
+              "displayName": "Valid until",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Transactions",
+              "displayName": "Transactions",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pending",
+                  "value": "Pending"
+                },
+                {
+                  "name": "Matched",
+                  "value": "Matched"
+                },
+                {
+                  "name": "Expired",
+                  "value": "Expired"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "2badc1f7-e054-4e38-8643-70089bc26caa",
+      "name": "Create a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "f6hTZTwsvAswBmn3",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Create a record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "91410d87-f261-4e5e-aa65-81e149ab1f89",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e0ded2a90d3379c1cd06ed702f16799bfcfc6b97017f5870f7dd1a63d71b3c15"
+  },
+  "id": "qUHSdx41nVrtUfhE",
+  "tags": []
+}
