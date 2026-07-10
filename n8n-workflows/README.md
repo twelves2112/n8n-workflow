@@ -9,8 +9,10 @@ A collection of n8n automation workflows. Each folder under `workflows/` contain
 | [D-PIA Tasks Reminder](workflows/d-pia-tasks-reminder/README.md) | Weekly employee/boss task reminder emails, sourced from a Google Sheet. |
 | [Email Classification](workflows/email-classification/README.md) | Classifies incoming Gmail messages by department via keyword rules and forwards a notification. |
 | [Gym Membership](workflows/gym-membership/README.md) | Registration, expiry reminders, and renewal handling for gym members via Airtable. |
-| [Mama-Tee](workflows/mama-tee/README.md) | Parses Vapi voice-call transcripts for a restaurant into orders/reservations/callbacks logged to Airtable. |
+| [Order and Reservation](workflows/mama-tee/README.md) | Parses Vapi voice-call transcripts for a restaurant into orders/reservations/callbacks logged to Airtable. |
 | [Transaction Log](workflows/transaction-log/README.md) | Parses bank debit-alert emails (OPay, GTBank, Kuda, Sterling) and logs categorized transactions to Notion. |
+| [Smart Trasnsaction System](workflows/smart-transaction-system/README.md) | Parses bank debit and credit alert emails categorize each transaction, flags likely impulse purchases (while excusing pre-declared or self-transfer transactions), logs everything to Airtable. |
+| [Macro Intelligence Bot](workflows/macro-intelligence-bot/README.md) | Delivers pre-event scenario briefs for high-impact FX events straight to Telegram. |
 
 ## Usage
 
