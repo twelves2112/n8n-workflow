@@ -1,0 +1,149 @@
+{
+  "name": "Macro intelligence bot",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        -16
+      ],
+      "id": "aa4ef539-9086-4f71-9306-201360020b82",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://nfs.faireconomy.media/ff_calendar_thisweek.json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        224,
+        -16
+      ],
+      "id": "676da5a1-cf8c-4fef-9a65-e5fe3c8b5a9a",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const keep = [\"USD\", \"GBP\", \"JPY\"];\n\nreturn $input.all()\n  .filter(item =>\n    item.json.impact === \"High\" && keep.includes(item.json.country)\n  )\n  .map(item => {\n    const e = item.json;\n    return {\n      json: {\n        title:       e.title,\n        currency:    e.country,                 // rename to match table\n        event_time:  e.date,                    // rename to match table\n        impact:      e.impact,\n        forecast:    e.forecast || null,         // \"\" → null\n        previous:    e.previous || null,\n        event_hash:  `${e.title}|${e.country}|${e.date}`  // dedup key\n      }\n    };\n  });"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        -16
+      ],
+      "id": "8cc54979-d439-4786-9ae1-c74e014ac583",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://YOUR_PROJECT_REF.supabase.co/rest/v1/events?on_conflict=event_hash",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "prefer",
+              "value": "resolution=ignore-duplicates,return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        656,
+        -16
+      ],
+      "id": "2fd566f6-0e3b-4728-956f-6b7100c957d3",
+      "name": "HTTP Request1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6n1Tw9ftXtIWPqq7",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "b87507ed-6db0-4595-ad46-75c177685b4b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "A4lNbdpLtkm8Si2o",
+  "tags": []
+}

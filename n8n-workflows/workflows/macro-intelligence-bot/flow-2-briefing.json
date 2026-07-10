@@ -1,0 +1,272 @@
+{
+  "name": "MIB(Flow 2)",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "YOUR_ANTHROPIC_API_KEY"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        432,
+        -64
+      ],
+      "id": "ad49acc5-0c70-41e7-9186-dc5667613679",
+      "name": "Call Claude"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  let text = item.json.content[0].text;\n\n  // Convert **bold** → *bold* (Telegram Markdown uses single asterisks)\n  text = text.replace(/\\*\\*(.+?)\\*\\*/g, '*$1*');\n\n  return { json: { brief_text: text } };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        -64
+      ],
+      "id": "c6422d16-15e4-4071-8655-d0d732350689",
+      "name": "Format for Telegram"
+    },
+    {
+      "parameters": {
+        "jsCode": "const systemPrompt = `You are a macroeconomic and central-bank intelligence analyst producing PRE-EVENT scenario briefs for a professional FX trader covering USD, GBP, JPY and the Fed, BoE, BoJ.\n\nYou are given ONE upcoming high-impact event with its forecast and previous values (no actual — it hasn't happened yet). Brief the trader on what to expect and how each outcome reshapes the macro picture, BEFORE the release.\n\nREASONING (internal — never output these steps):\nThink through what the metric measures and why it matters; how forecast compares to previous and what's already priced; the current stance of the relevant central bank; which outcomes read hawkish vs dovish; second-order effects on the currency, government yields, and gold; and what institutional desks will actually watch (usually the nuance, not the headline number).\n\nOUTPUT — produce ONLY this brief, ~200 words max, formatted for Telegram:\n\n📅 [Event] — [Currency] | [event date/time WAT] (in [time to event])\nForecast [x] vs Previous [y]\n\nCONTEXT: 1–2 sentences — what's at stake and the central bank's stance going in.\n\nSCENARIOS:\n- Hotter than forecast → [hawkish/dovish read] → [directional lean for currency + yields/gold if relevant] (conviction: High/Moderate/Low)\n- In line → [read] → [lean]\n- Cooler than forecast → [read] → [lean]\n\nWATCH: the single nuance that matters most (dot plot, vote split, presser tone) — what desks focus on beyond the headline number.\n\nRULES:\n- Anchor every figure to the data provided. Never recall current rates or levels from memory.\n- Conviction = High / Moderate / Low. Never invent precise percentages.\n- No trade signals, entries, levels, or technical/ICT/price-action analysis. Macro reasoning only.\n- Be concise and scannable — the trader reads this on a phone minutes before the event.`;\n\n// TEST event (hardcoded now; swaps to $json from Supabase query later)\nreturn $input.all().map(item => {\n  const e = item.json;\n  const minsUntil = Math.round((new Date(e.event_time) - new Date()) / 60000);\n  const timeToEvent = minsUntil <= 0 ? \"imminent\" : (minsUntil > 60 ? `${Math.round(minsUntil / 60)}h` : `${minsUntil}m`);\n\n  const eventDate = new Date(e.event_time).toLocaleString(\"en-GB\", {\n  timeZone: \"Africa/Lagos\",\n  weekday: \"short\",\n  day: \"numeric\",\n  month: \"short\",\n  hour: \"2-digit\",\n  minute: \"2-digit\",\n  hour12: false\n});\n\n  const userMessage = `Event: ${e.title}\n  Event date/time (WAT): ${eventDate}\nCurrency: ${e.currency}\nScheduled (ET): ${e.event_time}\nTime until event: ${timeToEvent}\nForecast: ${e.forecast || \"n/a\"}\nPrevious: ${e.previous || \"n/a\"}\nImpact: ${e.impact}\n\nProduce the pre-event scenario brief.`;\n\n  return {\n    json: {\n      model: \"claude-sonnet-4-6\",\n      max_tokens: 1024,\n      system: systemPrompt,\n      messages: [{ role: \"user\", content: userMessage }]\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        -64
+      ],
+      "id": "82e23ddc-9175-4929-9475-707ed43f0033",
+      "name": "Brain(system prompt)"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.brief_text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        880,
+        -64
+      ],
+      "id": "2c2da70f-8773-439f-8f7d-29c35a060594",
+      "name": "Send a text message",
+      "webhookId": "709f43e9-238d-48de-8fac-11267621d4d2",
+      "credentials": {
+        "telegramApi": {
+          "id": "TP8LV0VrSbEILt3Y",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://YOUR_PROJECT_REF.supabase.co/rest/v1/events",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "briefed_at",
+              "value": "is.null"
+            },
+            {
+              "name": "event_time",
+              "value": "=gte.{{ $now.toISO() }}"
+            },
+            {
+              "name": "event_time",
+              "value": "=lte.{{ $now.plus({ hours: 2 }).toISO() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -16,
+        -64
+      ],
+      "id": "80963180-0a10-45fa-ac8c-8d62e197dfaf",
+      "name": "Get Due Events",
+      "alwaysOutputData": false,
+      "credentials": {
+        "supabaseApi": {
+          "id": "6n1Tw9ftXtIWPqq7",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://YOUR_PROJECT_REF.supabase.co/rest/v1/events?event_hash=eq.{{ $('Get Due Events').item.json.event_hash }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"briefed_at\": $now.toISO() } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1104,
+        -64
+      ],
+      "id": "e33cc20d-cb4c-42b0-917b-8e0dbb370bab",
+      "name": "Mark Briefed",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6n1Tw9ftXtIWPqq7",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -240,
+        -64
+      ],
+      "id": "9b4eacdd-35c0-4a50-8b57-2e935f426587",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Call Claude": {
+      "main": [
+        [
+          {
+            "node": "Format for Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brain(system prompt)": {
+      "main": [
+        [
+          {
+            "node": "Call Claude",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format for Telegram": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Due Events": {
+      "main": [
+        [
+          {
+            "node": "Brain(system prompt)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        [
+          {
+            "node": "Mark Briefed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Due Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "79435120-2a59-4d16-920d-16a8d9207ca2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "rFoyrSN1cvE4cbxP",
+  "tags": []
+}
